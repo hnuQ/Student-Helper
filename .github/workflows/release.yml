@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            build_cmd: npm run build:win
+            config: electron-builder.yml
+
+          - platform: macos
+            build_cmd: npm run build:mac-standalone
+            config: electron-builder-mac.yml
+
+          - platform: ubuntu
+            build_cmd: npm run build:linux-standalone
+            config: electron-builder-linux.yml
+
+    runs-on: ${{ matrix.platform }}-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: ${{ matrix.build_cmd }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

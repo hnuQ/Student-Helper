@@ -1,0 +1,134 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows", "darwin", "darwin-arm64", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+  output        = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Institution {
+  id              String    @id @default(uuid())
+  name            String
+  department      String
+  tier            String    // REACH, MATCH, SAFETY
+  degreeType      String    // MASTER, PHD
+  campDeadline    DateTime?
+  pushDeadline    DateTime?
+  expectedQuota   Int?
+  policyTags      String    // JSON 格式存储标签
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  advisors        Advisor[]
+  tasks           Task[]
+}
+
+model Advisor {
+  id              String      @id @default(uuid())
+  institutionId   String
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  name            String
+  title           String?
+  researchArea    String
+  email           String
+  homepage        String?
+  contactStatus   String      // PENDING, SENT, REPLIED, INTERVIEW, REJECTED, ACCEPTED
+  lastContactDate DateTime?
+  reputationScore Int?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  assets          Asset[]
+  interviews      Interview[]
+}
+
+model Task {
+  id              String       @id @default(uuid())
+  institutionId   String?
+  institution     Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  title           String
+  dueDate         DateTime
+  isCompleted     Boolean      @default(false)
+  createdAt       DateTime    @default(now())
+}
+
+model Asset {
+  id              String      @id @default(uuid())
+  advisorId       String?
+  advisor         Advisor?    @relation(fields: [advisorId], references: [id], onDelete: SetNull)
+  type            String      // RESUME, TRANSCRIPT, RECOMMENDATION, OTHER
+  localPath       String      // 本地文件绝对路径
+  createdAt       DateTime    @default(now())
+}
+
+model Interview {
+  id              String      @id @default(uuid())
+  advisorId       String
+  advisor         Advisor     @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  date            DateTime
+  format          String      // ONLINE, OFFLINE
+  markdownNotes   String      // 面经记录
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  name      String
+  subject   String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  variables EmailVariable[]
+}
+
+model EmailVariable {
+  id          String        @id @default(uuid())
+  name        String
+  templateId  String
+  template    EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+}
+
+
+model DailyRecord {
+  id            String          @id @default(uuid())
+  date          String          @unique
+  weight        Float?
+  waist         Float?
+  chest         Float?
+  hips          Float?
+  totalMinutes  Int             @default(0)
+  studyMinutes  Int             @default(0)
+  trainingPlan  String?
+  rawText       String?
+  summary       String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  activities    DailyActivity[]
+}
+
+model DailyActivity {
+  id              String      @id @default(uuid())
+  dailyRecordId   String
+  dailyRecord     DailyRecord @relation(fields: [dailyRecordId], references: [id], onDelete: Cascade)
+  startTime       String
+  endTime         String
+  content         String
+  durationMinutes Int
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model WeeklySummary {
+  id            String   @id @default(uuid())
+  weekStartDate String   @unique
+  summary       String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

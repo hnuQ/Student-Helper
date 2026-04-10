@@ -1,0 +1,15 @@
+appId: com.student-helper.app
+productName: Student Helper
+directories:
+  output: dist-linux
+linux:
+  artifactName: Student-Helper-Linux-${version}-${arch}.${ext}
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  category: Education
+  icon: resources/icon.png

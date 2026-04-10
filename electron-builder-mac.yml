@@ -1,0 +1,19 @@
+appId: com.student-helper.app
+productName: Student Helper
+directories:
+  output: dist-mac
+mac:
+  artifactName: Student-Helper-Mac-${version}-${arch}.${ext}
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.education
+  gatekeeperAssess: false
+  hardenedRuntime: false
+  identity: null
