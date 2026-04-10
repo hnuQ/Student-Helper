@@ -1,6 +1,6 @@
 import { Moon, Sun, Monitor, Database, Download, Upload, Trash2 } from 'lucide-react'
-import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
+import { useTheme } from '../ThemeProvider'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Label } from '../ui/label'
