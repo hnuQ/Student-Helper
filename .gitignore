@@ -1,6 +1,7 @@
 ﻿node_modules/
 release/
 out/
+skills/
 .env
 image/
 dist-win/
