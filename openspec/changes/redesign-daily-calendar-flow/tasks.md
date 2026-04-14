@@ -1,23 +1,23 @@
-﻿## 1. 日历结构重组
+## 1. Calendar Structure
 
-- [ ] 1.1 将 `DailyTracker` 拆分为月历总览态与日期详情态，默认进入月历总览。
-- [ ] 1.2 在月历总览中突出显示今天，并保留按月切换与按日期进入详情的能力。
-- [ ] 1.3 在详情页增加明确的返回总览入口，并确保切换日期或返回时状态不会残留错位。
+- [x] 1.1 Split `DailyTracker` into a calendar overview state and a day detail state, with calendar overview as the default entry
+- [x] 1.2 Highlight today in the calendar overview while keeping month navigation and day entry working
+- [x] 1.3 Add a clear return action from day detail back to the calendar overview and reset stale detail state
 
-## 2. 活动编辑与时长联动
+## 2. Activity Editing And Duration Sync
 
-- [ ] 2.1 重构活动编辑区布局，使活动内容支持长文本完整显示与编辑。
-- [ ] 2.2 将详情页学习时长改为基于活动时间段的实时汇总结果，不再依赖独立手填值。
-- [ ] 2.3 调整保存逻辑，确保 `studyMinutes`、`totalMinutes` 与活动明细在持久化后保持一致。
+- [x] 2.1 Rework the activity editor so long activity content can be fully displayed and edited
+- [x] 2.2 Replace manual study-duration editing with activity-derived live totals in the detail page
+- [x] 2.3 Save `studyMinutes` and `totalMinutes` in a way that stays consistent with the current activity list
 
-## 3. 文本解析重复导入
+## 3. Repeatable Text Parsing
 
-- [ ] 3.1 调整解析区状态流转，使同一天可以多次点击解析并刷新预览。
-- [ ] 3.2 保持“解析预览”和“应用到表单”两个独立动作，避免解析结果自动覆盖用户当前编辑内容。
-- [ ] 3.3 验证原始文本在应用预览后仍可继续编辑并再次导入。
+- [x] 3.1 Keep the parsing flow repeatable for the same day so a new parse replaces the old preview
+- [x] 3.2 Keep parsing preview and preview application as separate actions
+- [ ] 3.3 Verify manually that raw text can still be edited and reparsed after preview application
 
-## 4. 验证与提交流程
+## 4. Verification And Git Flow
 
-- [ ] 4.1 验证关键链路：新增活动、删除活动、保存回显、切换日期回显、重启应用后回显。
-- [ ] 4.2 验证月历摘要与周报统计使用更新后的自动汇总时长结果。
-- [ ] 4.3 按里程碑执行 Git 提交，至少拆分为“结构改造”“时长联动”“解析修复”“联调验证”四类可回滚提交。
+- [ ] 4.1 Verify create, edit, delete, navigation, reload, and restart persistence in the desktop app
+- [ ] 4.2 Verify that calendar and weekly summaries use the updated activity-derived duration
+- [x] 4.3 Keep milestone-based Git commits so the work remains easy to roll back

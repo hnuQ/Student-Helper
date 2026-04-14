@@ -1,28 +1,30 @@
-﻿## Why
+## Why
 
-当前“日常”模块把月历和当天详情放在同一屏的双栏布局中，导致用户操作路径与预期不一致，也暴露出活动内容显示不全、学习时长不联动、文本解析只能导入一次等体验问题。项目正进入再开发阶段，需要先把这个高频页面的交互模型和数据行为稳定下来，并用可回滚的 Git 提交流程降低后续持续修改的风险。
+The current daily module places the calendar and day details on the same split screen. That interaction model does not match the intended workflow of "see the calendar first, then enter one day", and it also exposes several issues: activity content is clipped, study duration does not stay in sync with activities, and text parsing cannot be safely reused for repeated imports.
+
+This project is entering another development phase, so the daily module needs a stable interaction model and a rollback-friendly Git workflow before more changes are layered on top.
 
 ## What Changes
 
-- 将“日常”模块从当前双栏同屏编辑改为两层结构：第一层仅显示月历总览与当天标识，点击某一天后进入独立的详情页面。
-- 优化日详情页的活动编辑区域，使长文本内容可以完整查看和编辑，不再被窄输入框截断。
-- 将“学习时长”改为基于活动时间段的自动汇总结果，并在新增、删除、修改活动后即时更新显示与持久化值。
-- 调整文本解析流程，使用户可以在同一天内多次导入或重新解析文本，并明确解析预览与最终应用的关系。
-- 在本次变更实施中采用严格的 Git 提交流程：每个独立里程碑单独提交，提交前验证关键链路，确保任意阶段都可以通过 Git 回滚到明确位置。
+- Change the daily module from a split-screen editor to a two-layer flow: the first screen is the calendar overview only, and clicking a date opens a dedicated detail page for that day.
+- Improve the activity editor in the day detail page so long activity text can be viewed and edited without being clipped by a narrow single-line input.
+- Make study duration derive from activity time ranges and update immediately after activity add, edit, or delete operations.
+- Adjust the text parsing flow so users can parse and import text multiple times for the same day while keeping preview application explicit.
+- Enforce a stricter Git workflow during implementation so each milestone is committed separately and can be rolled back cleanly.
 
 ## Capabilities
 
 ### New Capabilities
-- `daily-calendar-detail-flow`: 规范日常模块的月历总览、日期跳转、详情编辑、活动汇总和文本导入行为。
+- `daily-calendar-detail-flow`: Defines calendar overview behavior, day navigation, detail editing, activity duration aggregation, and repeatable text import behavior for the daily module.
 
 ### Modified Capabilities
 
-无。
+None.
 
 ## Impact
 
-- 前端页面：`src/components/features/DailyTracker.tsx` 需要拆分视图结构并重组交互状态。
-- 共享类型：`src/env.d.ts` 可能需要补充更清晰的日详情和解析交互约束。
-- Electron 主进程：`electron/main/index.ts` 需要确认 `daily:upsert`、`daily:parseText` 与按天读取接口满足新的自动汇总和重复导入行为。
-- 数据模型：现有 `DailyRecord` / `DailyActivity` 结构可复用，但要保证 `totalMinutes` 与活动明细保持一致。
-- 交付流程：本次开发需按功能节点提交 Git commit，避免把多个高风险 UI/数据改动混在一次提交中。
+- Frontend page: `src/components/features/DailyTracker.tsx`
+- Shared typing: `src/env.d.ts` may need clearer day-detail and parsing interaction constraints
+- Electron main process: `electron/main/index.ts` daily handlers must remain aligned with the new duration and parsing behavior
+- Data model: existing `DailyRecord` and `DailyActivity` tables remain reusable, but `totalMinutes` must stay consistent with activities
+- Delivery process: implementation should be committed in milestone-sized steps rather than one large mixed commit

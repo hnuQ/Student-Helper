@@ -1,68 +1,68 @@
-﻿## Context
+## Context
 
-当前日常页面由 `DailyTracker.tsx` 单文件承担月历、当天详情、文本解析、周报等全部交互，月历与详情使用同屏双栏布局。这个结构带来了三个直接问题：一是用户需要先浏览日历再进入某一天详情，但界面默认暴露了当天编辑表单；二是活动内容输入框与列表布局偏窄，长文本在高频使用场景下无法完整呈现；三是学习时长字段既有手动输入，又有活动时段自动计算后的 `totalMinutes`，两套数据来源并存，导致显示与持久化不一致。
+The current daily page uses one large `DailyTracker.tsx` component to manage calendar browsing, day editing, text parsing, and weekly review. The calendar and day detail editor are rendered side by side, which creates a mismatch with the expected user flow. The current layout also makes long activity descriptions hard to edit and keeps two separate duration concepts in play: manual `studyMinutes` input and activity-derived `totalMinutes`.
 
-现有持久化链路中，`DailyRecord` 已经保存 `totalMinutes`、`studyMinutes`、`rawText` 与 `activities`，主进程 `daily:upsert` 也会基于活动重新计算 `totalMinutes`。这说明数据层已经具备“活动驱动总时长”的基础，但前端仍把“学习时长”视为用户输入字段。同时，`loadDay` 会在切换日期时清空 `parsePreview`，文本解析区也没有清晰的“重新导入”路径，导致同一天再次解析时体验混乱。
+The persistence layer already stores `totalMinutes`, `studyMinutes`, `rawText`, and `activities`, and the main-process `daily:upsert` handler already recalculates `totalMinutes` from activities. That means the backend is already close to an activity-driven model, but the frontend still behaves like study duration is a manual field. The parsing flow also needs to remain repeatable without silently overwriting user edits.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- 将日常模块调整为“月历总览页 -> 某日详情页”的两层操作模型。
-- 在月历页明确展示今天，并让用户通过点击日期进入详情页，再从详情页返回月历页。
-- 在详情页中让活动内容支持长文本输入和可见展示，避免关键内容被截断。
-- 统一学习时长来源，以活动时间段自动汇总为准，并在增删改活动后实时刷新界面与保存值。
-- 允许用户对同一天多次执行文本解析与导入，不因为已有预览或已有记录而被锁死。
-- 将 Git 提交流程纳入实施规范，确保每个里程碑都可以独立回滚。
+- Present the daily module as a calendar overview first, with a dedicated day detail view entered from the calendar
+- Highlight today on the calendar overview
+- Allow long activity content to be fully visible and editable
+- Treat activity time ranges as the source of truth for displayed and saved study duration
+- Keep text parsing repeatable for the same day while requiring explicit preview application
+- Preserve rollback-friendly development through milestone-based Git commits
 
 **Non-Goals:**
-- 不重构周报页面的数据模型，只保证周报继续消费稳定的按天汇总结果。
-- 不引入新的数据库表，也不改变 `DailyRecord` / `DailyActivity` 的核心关系。
-- 不在本次变更中扩展自然语言解析能力，只修复解析结果反复应用的交互问题。
+- No weekly data model redesign
+- No database schema expansion for this change
+- No upgrade of the natural-language parser itself beyond repeatable import behavior
 
 ## Decisions
 
-### 1. 采用路由内双状态切换实现两层结构，而不是新增独立顶层导航
-- 方案：保留 `daily` 作为现有侧边栏入口，在 `DailyTracker` 内拆分为“月历总览态”和“日期详情态”，详情态由 `selectedDate` 驱动，并提供明确的返回动作。
-- 原因：这次改造聚焦日常模块本身，不需要改动全局导航结构；在同一功能模块内做两层切换，可以复用已存在的按月、按日、按周查询接口，降低对其他页面的影响。
-- 备选方案：新增 `daily-calendar` 与 `daily-detail` 两个顶层 view。未采用，因为会扩大 store、侧边栏和跨页面状态同步范围。
+### 1. Keep one top-level `daily` entry and switch views inside the module
+- Decision: retain the existing sidebar entry and implement a calendar-overview state plus a day-detail state inside `DailyTracker`
+- Why: this keeps the change local to the daily module and reuses existing month/day/week APIs
+- Alternative considered: introduce separate global views for daily calendar and daily detail; rejected because it would expand routing and store changes beyond the real scope
 
-### 2. 以活动汇总结果作为唯一的学习时长来源
-- 方案：详情页展示只读或半只读的“总学习时长”结果，值由当前活动草稿实时计算，并在保存时写入 `studyMinutes` 与 `totalMinutes` 的一致值。
-- 原因：当前主进程已经使用活动计算 `totalMinutes`，继续保留手输学习时长会让日历摘要、周报统计和详情表单出现两个事实来源。统一后，月历、周报和详情页都可共享同一套时间结果。
-- 备选方案：保留手动覆盖字段。未采用，因为会持续制造“活动列表改了但学习时长不变”的问题。
+### 2. Make activity-derived duration the only duration source in the detail UI
+- Decision: compute duration from the current activity drafts and save that value as `studyMinutes`
+- Why: the current dual-source model is the reason summary values become inconsistent across detail, calendar, and weekly views
+- Alternative considered: keep a manual override field; rejected because it preserves the synchronization bug
 
-### 3. 活动内容改为支持换行的输入与摘要展示
-- 方案：活动编辑区域改为更宽的布局，内容输入使用可扩展的多行输入组件，列表项在详情页中显示完整内容或至少支持自动换行。
-- 原因：当前活动内容字段承载的往往是学习任务描述，不是短标题；单行窄输入框不符合真实使用场景。
-- 备选方案：保留单行输入框，仅通过 tooltip 查看全文。未采用，因为编辑时仍然受限，且桌面端高频录入场景下效率差。
+### 3. Replace the narrow activity content input with a multi-line editor
+- Decision: use a larger layout and multi-line text input for activity content
+- Why: activity content in this app behaves more like a task description than a short label
+- Alternative considered: keep a one-line input and use tooltips for full text; rejected because editing would still be constrained
 
-### 4. 文本解析采用“可反复解析、预览可重复覆盖、应用后不清空原文”的流程
-- 方案：保留 `rawText` 作为当前文本源，每次点击解析都重新调用 `daily:parseText` 生成新的预览；应用预览时只覆盖表单字段，不自动清空原始文本，用户可继续修改文本后再次解析。
-- 原因：用户在整理一天记录时常常需要补充新内容后再次导入，解析动作必须是幂等且可重复的。
-- 备选方案：解析后即锁定输入区或自动清空文本。未采用，因为这正是当前问题来源之一。
+### 4. Keep parsing repeatable and preview-driven
+- Decision: preserve `rawText`, allow repeated parse actions against the latest text, and only update the form on explicit preview application
+- Why: users need to refine imported text and reparse without losing control of the current form state
+- Alternative considered: clear or lock text after parsing; rejected because it recreates the same usability problem
 
-### 5. 通过里程碑式 Git 提交控制回滚点
-- 方案：按“结构改造”“活动时长联动”“文本解析修复”“联调验证”四个阶段提交，每阶段提交前运行对应验证并记录变更边界。
-- 原因：这次变更同时涉及 UI、状态管理和 Electron 持久化链路，拆分提交能显著降低回滚成本。
-- 备选方案：全部完成后一次性提交。未采用，因为难以定位问题，也不满足你希望随时回滚到指定位置的需求。
+### 5. Use milestone commits as rollback points
+- Decision: keep implementation grouped into milestone-sized commits such as structure, duration sync, parsing fix, and verification
+- Why: this change spans layout, state flow, and persistence behavior, so rollback points matter
+- Alternative considered: one final commit after everything is done; rejected because it weakens rollback safety
 
 ## Risks / Trade-offs
 
-- [月历与详情切换状态复杂度上升] → 用清晰的视图状态边界区分总览态与详情态，避免在未选日期时残留旧表单数据。
-- [统一学习时长来源可能影响历史记录展示] → 保存和读取时同时兼容历史 `studyMinutes` 字段，但新界面以活动汇总结果为准，并验证月历和周报摘要是否一致。
-- [多次解析可能覆盖用户手工编辑内容] → 在“应用解析结果”动作中只在用户明确点击时覆盖表单，不在解析完成后自动写入。
-- [单文件继续膨胀] → 如果拆分后 `DailyTracker.tsx` 仍过大，可进一步拆出 `DailyCalendarView` 和 `DailyDetailView` 子组件，但不把这作为本次前置阻塞。
-- [Git 提交过细增加操作频率] → 只按可验证的功能节点提交，不为微小样式调整单独切碎提交。
+- [View-state complexity increases] -> Keep overview state and detail state clearly separated and reset detail state on exit
+- [Historical records may display differently] -> Use activity-derived duration for new saves and verify calendar and weekly summaries after loading existing records
+- [Repeated parsing could overwrite manual edits] -> Only apply parsed data when the user explicitly clicks apply
+- [Single component may remain large] -> Accept that for now and split further only if the module becomes harder to maintain
+- [More frequent commits add workflow overhead] -> Keep commits aligned to meaningful, verifiable milestones
 
 ## Migration Plan
 
-1. 先完成日常页的视图拆分，让月历总览与详情页切换可用，并保留现有数据读取能力。
-2. 再统一活动时长计算逻辑，确保详情页、月历摘要和周报统计使用一致结果。
-3. 接着修复文本解析可重复导入流程，验证同一天多次解析与保存不会丢数据。
-4. 最后进行桌面端完整链路验证：录入、保存、切页回显、重启后回显。
-5. 若任一阶段出现严重回归，使用最近一个功能节点的 Git commit 执行回滚，而不是在脏工作区中手动撤销零散改动。
+1. Implement the overview/detail layout split while preserving existing data reads
+2. Switch duration display and save logic to activity-derived values
+3. Keep parsing repeatable and verify that repeated import flows still work
+4. Validate create, edit, delete, navigation, reload, and restart behavior
+5. Roll back to the latest milestone commit if any stage introduces a blocking regression
 
 ## Open Questions
 
-- 详情页是否需要在标题区同时显示“今天”标识，还是只在月历页突出当天即可？当前默认只把“今天高亮”作为月历页要求。
-- 活动内容在详情页中是始终多行展示，还是编辑时多行、只读时折叠展示？本次先按“编辑与查看都可完整显示”设计。
+- Whether the detail header also needs a special "today" treatment, or whether highlighting today in the calendar is sufficient
+- Whether activity content should remain fully expanded in all states or gain a collapsed view later
