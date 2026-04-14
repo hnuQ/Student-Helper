@@ -4,6 +4,7 @@ import { existsSync, copyFileSync, unlinkSync } from 'fs'
 import log from 'electron-log'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import Database from 'better-sqlite3'
 
 const execAsync = promisify(exec)
 const isDev = !app.isPackaged
@@ -161,9 +162,11 @@ async function initializeDatabase(): Promise<string> {
   }
 
   try {
+    ensureDailyRecordColumns(userDbPath)
     const { PrismaClient: PC } = require(getPrismaClientPath())
     const tmpPrisma = new PC({ datasources: { db: { url: `file:${userDbPath}` } } })
     await tmpPrisma.weeklySummary.findFirst({ select: { id: true } })
+    await tmpPrisma.dailyRecord.findFirst({ select: { id: true, breakfast: true, lunch: true, dinner: true, snacks: true } })
     await tmpPrisma.$disconnect()
     log.info('[Prod] User database schema is up to date')
     return userDbPath
@@ -177,6 +180,24 @@ async function initializeDatabase(): Promise<string> {
       log.info('[Prod] Database replaced successfully')
     }
     return userDbPath
+  }
+}
+
+function ensureDailyRecordColumns(dbPath: string): void {
+  const requiredColumns = ['breakfast', 'lunch', 'dinner', 'snacks'] as const
+  const sqlite = new Database(dbPath)
+
+  try {
+    const rows = sqlite.prepare("PRAGMA table_info('DailyRecord')").all() as Array<{ name: string }>
+    const existingColumns = new Set(rows.map((row) => row.name))
+
+    for (const column of requiredColumns) {
+      if (existingColumns.has(column)) continue
+      sqlite.exec(`ALTER TABLE "DailyRecord" ADD COLUMN "${column}" TEXT`)
+      log.info(`[Prod] Added missing DailyRecord column: ${column}`)
+    }
+  } finally {
+    sqlite.close()
   }
 }
 
