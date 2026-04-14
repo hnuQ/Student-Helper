@@ -18,6 +18,6 @@
 
 ## 4. Verification And Git Flow
 
-- [ ] 4.1 Verify create, edit, delete, navigation, reload, and restart persistence in the desktop app
-- [ ] 4.2 Verify that calendar and weekly summaries use the updated activity-derived duration
+- [x] 4.1 Verify create, edit, delete, navigation, reload, and restart persistence in the desktop app
+- [x] 4.2 Verify that calendar and weekly summaries use the updated activity-derived duration
 - [x] 4.3 Keep milestone-based Git commits so the work remains easy to roll back
