@@ -105,6 +105,10 @@ model DailyRecord {
   totalMinutes  Int             @default(0)
   studyMinutes  Int             @default(0)
   trainingPlan  String?
+  breakfast     String?
+  lunch         String?
+  dinner        String?
+  snacks        String?
   rawText       String?
   summary       String?
   createdAt     DateTime        @default(now())

@@ -712,6 +712,10 @@ ipcMain.handle('daily:upsert', async (_, data: any) => {
       totalMinutes,
       studyMinutes,
       trainingPlan: data.trainingPlan ?? null,
+      breakfast: data.breakfast ?? null,
+      lunch: data.lunch ?? null,
+      dinner: data.dinner ?? null,
+      snacks: data.snacks ?? null,
       rawText: data.rawText ?? null,
       summary: data.summary ?? null,
       activities: { create: activities }
@@ -724,6 +728,10 @@ ipcMain.handle('daily:upsert', async (_, data: any) => {
       totalMinutes,
       studyMinutes,
       trainingPlan: data.trainingPlan ?? null,
+      breakfast: data.breakfast ?? null,
+      lunch: data.lunch ?? null,
+      dinner: data.dinner ?? null,
+      snacks: data.snacks ?? null,
       rawText: data.rawText ?? null,
       summary: data.summary ?? null,
       activities: {

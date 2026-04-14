@@ -21,9 +21,11 @@ import {
   Dumbbell,
   FileText,
   Plus,
+  RefreshCcw,
   Save,
   Sparkles,
   Trash2,
+  UtensilsCrossed,
   WrapText
 } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -48,6 +50,13 @@ interface HealthDraft {
   hips: string
 }
 
+interface MealsDraft {
+  breakfast: string
+  lunch: string
+  dinner: string
+  snacks: string
+}
+
 const TEXT = {
   title: '\u65e5\u5e38',
   subtitle: '\u6309\u5929\u8bb0\u5f55\u5b66\u4e60\u3001\u8bad\u7ec3\u548c\u8eab\u4f53\u6570\u636e\uff0c\u652f\u6301\u5468\u89c6\u56fe\u6c47\u603b\u3002',
@@ -59,13 +68,25 @@ const TEXT = {
   dayLoading: '\u6b63\u5728\u52a0\u8f7d\u5f53\u5929\u8bb0\u5f55...',
   dayHint: '\u8bb0\u5f55\u5f53\u5929\u7684\u8eab\u4f53\u6570\u636e\u3001\u5b66\u4e60\u65f6\u957f\u548c\u6d3b\u52a8\u5b89\u6392\u3002',
   backToCalendar: '\u8fd4\u56de\u65e5\u5386',
+  refresh: '\u5237\u65b0',
   weight: '\u4f53\u91cd',
   waist: '\u8170\u56f4',
   chest: '\u80f8\u56f4',
   hips: '\u81c0\u56f4',
+  meals: '\u9910\u98df\u8bb0\u5f55',
+  mealsHint: '\u8bb0\u5f55\u4eca\u5929\u4e09\u9910\u548c\u52a0\u9910\uff0c\u4fdd\u5b58\u540e\u4f1a\u968f\u65e5\u8bb0\u4e00\u8d77\u6301\u4e45\u5316\u3002',
+  breakfast: '\u65e9\u9910',
+  lunch: '\u5348\u9910',
+  dinner: '\u665a\u9910',
+  snacks: '\u52a0\u9910',
+  breakfastPlaceholder: '\u4f8b\u5982\uff1a\u9e21\u86cb + \u9762\u5305 + \u5496\u5561',
+  lunchPlaceholder: '\u4f8b\u5982\uff1a\u9e21\u80f8\u8089 + \u7c73\u996d + \u9752\u83dc',
+  dinnerPlaceholder: '\u4f8b\u5982\uff1a\u725b\u8089\u9762 + \u6c99\u62c9',
+  snacksPlaceholder: '\u4f8b\u5982\uff1a\u6c34\u679c / \u9178\u5976 / \u86cb\u767d\u68d2',
   studyHours: '\u5b66\u4e60\u65f6\u957f',
   hours: '\u5c0f\u65f6',
   trainingPlan: '\u8bad\u7ec3\u8ba1\u5212',
+  detailHeaderHint: '\u5728\u8fd9\u91cc\u96c6\u4e2d\u7ef4\u62a4\u5f53\u5929\u7684\u8eab\u4f53\u3001\u8bad\u7ec3\u3001\u996e\u98df\u548c\u5b66\u4e60\u8bb0\u5f55\u3002',
   activities: '\u6d3b\u52a8\u5b89\u6392',
   total: '\u7d2f\u8ba1',
   addActivity: '\u6dfb\u52a0\u6d3b\u52a8',
@@ -100,6 +121,7 @@ const TEXT = {
   saveWeekSummary: '\u4fdd\u5b58\u5468\u603b\u7ed3',
   restoreWeekSummary: '\u6062\u590d\u5df2\u4fdd\u5b58\u5185\u5bb9',
   saveSuccess: '\u4fdd\u5b58\u6210\u529f',
+  refreshSuccess: '\u5df2\u5237\u65b0\u5f53\u524d\u65e5\u671f\u6570\u636e',
   saveFailed: '\u4fdd\u5b58\u5931\u8d25\uff1a',
   deleteConfirmPrefix: '\u786e\u5b9a\u5220\u9664 ',
   deleteConfirmSuffix: ' \u7684\u65e5\u5e38\u8bb0\u5f55\u5417\uff1f'
@@ -110,7 +132,7 @@ const TRAINING_OPTIONS = [
   { value: 'BACK', label: '\u80cc' },
   { value: 'LEGS', label: '\u817f' },
   { value: 'REST', label: '\u4f11\u606f' },
-  { value: 'OTHER', label: '\u5176\u4ed6' }
+  { value: 'OTHER', label: '\u6709\u6c27' }
 ] as const
 
 const WEEKDAY_LABELS = ['\u4e00', '\u4e8c', '\u4e09', '\u56db', '\u4e94', '\u516d', '\u65e5']
@@ -158,6 +180,15 @@ function buildActivityDrafts(record?: DailyRecordData | null): ActivityDraft[] {
   }))
 }
 
+function buildMealsDraft(record?: DailyRecordData | null): MealsDraft {
+  return {
+    breakfast: record?.breakfast || '',
+    lunch: record?.lunch || '',
+    dinner: record?.dinner || '',
+    snacks: record?.snacks || ''
+  }
+}
+
 function formatTrainingPlan(value: string | null | undefined): string {
   return TRAINING_OPTIONS.find((option) => option.value === value)?.label || '\u672a\u8bbe\u7f6e'
 }
@@ -170,6 +201,7 @@ export default function DailyTracker(): JSX.Element {
   const [monthRecords, setMonthRecords] = useState<DailyRecordData[]>([])
   const [selectedRecord, setSelectedRecord] = useState<DailyRecordData | null>(null)
   const [health, setHealth] = useState<HealthDraft>(buildHealthDraft())
+  const [meals, setMeals] = useState<MealsDraft>(buildMealsDraft())
   const [activities, setActivities] = useState<ActivityDraft[]>(buildActivityDrafts())
   const [trainingPlan, setTrainingPlan] = useState('REST')
   const [summary, setSummary] = useState('')
@@ -232,6 +264,7 @@ export default function DailyTracker(): JSX.Element {
       const record = await window.api.daily.getByDate(date)
       setSelectedRecord(record)
       setHealth(buildHealthDraft(record))
+      setMeals(buildMealsDraft(record))
       setActivities(buildActivityDrafts(record))
       setTrainingPlan(record?.trainingPlan || 'REST')
       setSummary(record?.summary || '')
@@ -259,6 +292,7 @@ export default function DailyTracker(): JSX.Element {
     setSelectedDate(null)
     setSelectedRecord(null)
     setHealth(buildHealthDraft())
+    setMeals(buildMealsDraft())
     setActivities(buildActivityDrafts())
     setTrainingPlan('REST')
     setSummary('')
@@ -270,6 +304,10 @@ export default function DailyTracker(): JSX.Element {
     setActivities((current) =>
       current.map((activity, idx) => (idx === index ? { ...activity, [field]: value } : activity))
     )
+  }
+
+  function updateMeal(field: keyof MealsDraft, value: string): void {
+    setMeals((current) => ({ ...current, [field]: value }))
   }
 
   function addActivity(): void {
@@ -316,6 +354,13 @@ export default function DailyTracker(): JSX.Element {
     }
   }
 
+  async function handleRefreshDay(): Promise<void> {
+    if (!selectedDate) return
+    setParsePreview(null)
+    await Promise.all([loadDay(selectedDate), loadWeek(selectedDate), loadMonth(currentMonth)])
+    alert(TEXT.refreshSuccess)
+  }
+
   async function handleSave(): Promise<void> {
     if (!selectedDate) return
     setIsSaving(true)
@@ -328,6 +373,10 @@ export default function DailyTracker(): JSX.Element {
         hips: health.hips ? Number(health.hips) : null,
         studyMinutes: totalMinutes,
         trainingPlan,
+        breakfast: meals.breakfast.trim() || null,
+        lunch: meals.lunch.trim() || null,
+        dinner: meals.dinner.trim() || null,
+        snacks: meals.snacks.trim() || null,
         rawText: rawText.trim() || null,
         summary: summary.trim() || null,
         activities
@@ -426,123 +475,217 @@ export default function DailyTracker(): JSX.Element {
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between gap-3">
-          <Button variant="outline" onClick={resetDetailState} className="gap-1.5">
-            <ArrowLeft className="h-4 w-4" />
-            {TEXT.backToCalendar}
-          </Button>
-          <p className="text-sm text-muted-foreground">{TEXT.autoDurationHint}</p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
+        <Card className="overflow-hidden border-none bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-slate-50 shadow-sm">
+          <CardContent className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+                <span className="rounded-full bg-white/10 px-3 py-1">
+                  {selectedDate === todayKey ? TEXT.today : selectedDate}
+                </span>
+                <span>{TEXT.detailHeaderHint}</span>
+              </div>
               <div>
-                <CardTitle className="text-xl">
+                <h3 className="text-2xl font-semibold">
                   {format(parseISO(selectedDate), 'yyyy\u5e74MM\u6708dd\u65e5 EEEE', { locale: zhCN })}
+                </h3>
+                <p className="mt-1 text-sm text-slate-300">{isLoadingDay ? TEXT.dayLoading : TEXT.dayHint}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="secondary" onClick={resetDetailState} className="gap-1.5">
+                  <ArrowLeft className="h-4 w-4" />
+                  {TEXT.backToCalendar}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => void handleRefreshDay()}
+                  className="gap-1.5 border-white/20 bg-white/5 text-slate-50 hover:bg-white/10 hover:text-slate-50"
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                  {TEXT.refresh}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-white/10 px-5 py-4 backdrop-blur">
+                <p className="text-sm text-slate-300">{`${TEXT.studyHours} (${TEXT.hours})`}</p>
+                <p className="mt-2 text-3xl font-semibold">{formatHours(totalMinutes)}</p>
+              </div>
+              <div className="rounded-2xl bg-white/10 px-5 py-4 backdrop-blur">
+                <p className="text-sm text-slate-300">{TEXT.trainingPlan}</p>
+                <p className="mt-2 text-3xl font-semibold">{formatTrainingPlan(trainingPlan)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.35fr]">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{TEXT.title}</CardTitle>
+                <CardDescription>{TEXT.autoDurationHint}</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>{`${TEXT.weight} (kg)`}</Label>
+                  <Input value={health.weight} onChange={(e) => setHealth((state) => ({ ...state, weight: e.target.value }))} placeholder="62.5" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{`${TEXT.waist} (cm)`}</Label>
+                  <Input value={health.waist} onChange={(e) => setHealth((state) => ({ ...state, waist: e.target.value }))} placeholder="78" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{`${TEXT.chest} (cm)`}</Label>
+                  <Input value={health.chest} onChange={(e) => setHealth((state) => ({ ...state, chest: e.target.value }))} placeholder="92" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{`${TEXT.hips} (cm)`}</Label>
+                  <Input value={health.hips} onChange={(e) => setHealth((state) => ({ ...state, hips: e.target.value }))} placeholder="95" />
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label>{TEXT.trainingPlan}</Label>
+                  <Select value={trainingPlan} onValueChange={setTrainingPlan}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRAINING_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <UtensilsCrossed className="h-5 w-5" />
+                  {TEXT.meals}
                 </CardTitle>
-                <CardDescription>{isLoadingDay ? TEXT.dayLoading : TEXT.dayHint}</CardDescription>
-              </div>
-              <div className="rounded-lg border bg-muted/20 px-4 py-3 text-right">
-                <p className="text-sm text-muted-foreground">{`${TEXT.studyHours} (${TEXT.hours})`}</p>
-                <p className="text-2xl font-semibold">{formatHours(totalMinutes)}</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>{`${TEXT.weight} (kg)`}</Label>
-                <Input value={health.weight} onChange={(e) => setHealth((state) => ({ ...state, weight: e.target.value }))} placeholder="62.5" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{`${TEXT.waist} (cm)`}</Label>
-                <Input value={health.waist} onChange={(e) => setHealth((state) => ({ ...state, waist: e.target.value }))} placeholder="78" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{`${TEXT.chest} (cm)`}</Label>
-                <Input value={health.chest} onChange={(e) => setHealth((state) => ({ ...state, chest: e.target.value }))} placeholder="92" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{`${TEXT.hips} (cm)`}</Label>
-                <Input value={health.hips} onChange={(e) => setHealth((state) => ({ ...state, hips: e.target.value }))} placeholder="95" />
-              </div>
-              <div className="space-y-1.5 md:col-span-2">
-                <Label>{TEXT.trainingPlan}</Label>
-                <Select value={trainingPlan} onValueChange={setTrainingPlan}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TRAINING_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                <CardDescription>{TEXT.mealsHint}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>{TEXT.breakfast}</Label>
+                  <Textarea value={meals.breakfast} onChange={(e) => updateMeal('breakfast', e.target.value)} placeholder={TEXT.breakfastPlaceholder} className="min-h-[84px]" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{TEXT.lunch}</Label>
+                  <Textarea value={meals.lunch} onChange={(e) => updateMeal('lunch', e.target.value)} placeholder={TEXT.lunchPlaceholder} className="min-h-[84px]" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{TEXT.dinner}</Label>
+                  <Textarea value={meals.dinner} onChange={(e) => updateMeal('dinner', e.target.value)} placeholder={TEXT.dinnerPlaceholder} className="min-h-[84px]" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{TEXT.snacks}</Label>
+                  <Textarea value={meals.snacks} onChange={(e) => updateMeal('snacks', e.target.value)} placeholder={TEXT.snacksPlaceholder} className="min-h-[84px]" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold">{TEXT.activities}</h3>
-                <p className="text-sm text-muted-foreground">{`${TEXT.total} ${formatHours(totalMinutes)}`}</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={addActivity} className="gap-1.5"><Plus className="h-4 w-4" />{TEXT.addActivity}</Button>
-            </div>
-
-            <div className="space-y-4">
-              {activities.map((activity, index) => {
-                const duration = calculateDuration(activity.startTime, activity.endTime)
-                return (
-                  <div key={`${activity.id || 'new'}-${index}`} className="space-y-3 rounded-xl border bg-muted/20 p-4">
-                    <div className="grid gap-3 lg:grid-cols-[140px_140px_1fr_auto]">
-                      <Input type="time" value={activity.startTime} onChange={(e) => updateActivity(index, 'startTime', e.target.value)} />
-                      <Input type="time" value={activity.endTime} onChange={(e) => updateActivity(index, 'endTime', e.target.value)} />
-                      <Textarea value={activity.content} onChange={(e) => updateActivity(index, 'content', e.target.value)} placeholder={TEXT.activityPlaceholder} className="min-h-[88px] resize-y" />
-                      <Button variant="ghost" size="icon" onClick={() => removeActivity(index)} className="self-start"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-lg">{TEXT.activities}</CardTitle>
+                  <CardDescription>{`${TEXT.total} ${formatHours(totalMinutes)}`}</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={addActivity} className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  {TEXT.addActivity}
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {activities.map((activity, index) => {
+                  const duration = calculateDuration(activity.startTime, activity.endTime)
+                  return (
+                    <div key={`${activity.id || 'new'}-${index}`} className="space-y-3 rounded-2xl border bg-muted/20 p-4">
+                      <div className="grid gap-3 lg:grid-cols-[140px_140px_1fr_auto]">
+                        <Input type="time" value={activity.startTime} onChange={(e) => updateActivity(index, 'startTime', e.target.value)} />
+                        <Input type="time" value={activity.endTime} onChange={(e) => updateActivity(index, 'endTime', e.target.value)} />
+                        <Textarea value={activity.content} onChange={(e) => updateActivity(index, 'content', e.target.value)} placeholder={TEXT.activityPlaceholder} className="min-h-[96px] resize-y" />
+                        <Button variant="ghost" size="icon" onClick={() => removeActivity(index)} className="self-start">
+                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {duration > 0 ? `${TEXT.duration} ${formatHours(duration)}` : TEXT.invalidDuration}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{duration > 0 ? `${TEXT.duration} ${formatHours(duration)}` : TEXT.invalidDuration}</p>
+                  )
+                })}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{TEXT.summary}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} placeholder={TEXT.summaryPlaceholder} className="min-h-[140px]" />
+                <div className="flex items-center gap-2">
+                  <Button onClick={handleSave} disabled={isSaving} className="gap-1.5">
+                    <Save className="h-4 w-4" />
+                    {isSaving ? TEXT.saving : TEXT.save}
+                  </Button>
+                  {selectedRecord ? (
+                    <Button variant="outline" onClick={handleDelete} className="gap-1.5 text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                      {TEXT.delete}
+                    </Button>
+                  ) : null}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <WrapText className="h-5 w-5" />
+                  {TEXT.parseTitle}
+                </CardTitle>
+                <CardDescription>{TEXT.parseDesc}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea value={rawText} onChange={(e) => setRawText(e.target.value)} className="min-h-[220px]" placeholder={RAW_TEXT_PLACEHOLDER} />
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={handleParseText} disabled={isParsing || !rawText.trim()} className="gap-1.5">
+                    <Sparkles className="h-4 w-4" />
+                    {isParsing ? TEXT.parsing : TEXT.parse}
+                  </Button>
+                </div>
+                {parsePreview ? (
+                  <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium">{TEXT.parseResult}</p>
+                        <p className="text-sm text-muted-foreground">{`\u65e5\u671f ${parsePreview.date}\uff0c${TEXT.total} ${formatHours(parsePreview.totalMinutes)}`}</p>
+                      </div>
+                      <Button size="sm" onClick={applyParsePreview}>{TEXT.apply}</Button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                      <div>{`${TEXT.weight}\uff1a${parsePreview.weight ?? '--'}`}</div>
+                      <div>{`${TEXT.waist}\uff1a${parsePreview.waist ?? '--'}`}</div>
+                      <div>{`${TEXT.chest}\uff1a${parsePreview.chest ?? '--'}`}</div>
+                      <div>{`${TEXT.hips}\uff1a${parsePreview.hips ?? '--'}`}</div>
+                    </div>
+                    <div className="space-y-2">
+                      {parsePreview.activities.length > 0 ? parsePreview.activities.map((activity, index) => <div key={`${activity.startTime}-${activity.endTime}-${index}`} className="rounded border bg-background px-3 py-2 text-sm"><span className="font-medium">{activity.startTime} - {activity.endTime}</span><p className="mt-1 whitespace-pre-wrap text-muted-foreground">{activity.content}</p></div>) : <p className="text-sm text-muted-foreground">{TEXT.noActivities}</p>}
+                    </div>
+                    {parsePreview.warnings.length > 0 ? <div className="space-y-1 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{parsePreview.warnings.map((warning) => <p key={warning}>{warning}</p>)}</div> : null}
                   </div>
-                )
-              })}
-            </div>
-
-            <div className="space-y-1.5"><Label>{TEXT.summary}</Label><Textarea value={summary} onChange={(e) => setSummary(e.target.value)} placeholder={TEXT.summaryPlaceholder} className="min-h-[120px]" /></div>
-
-            <div className="flex items-center gap-2">
-              <Button onClick={handleSave} disabled={isSaving} className="gap-1.5"><Save className="h-4 w-4" />{isSaving ? TEXT.saving : TEXT.save}</Button>
-              {selectedRecord ? <Button variant="outline" onClick={handleDelete} className="gap-1.5 text-destructive"><Trash2 className="h-4 w-4" />{TEXT.delete}</Button> : null}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg"><WrapText className="h-5 w-5" />{TEXT.parseTitle}</CardTitle>
-            <CardDescription>{TEXT.parseDesc}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Textarea value={rawText} onChange={(e) => setRawText(e.target.value)} className="min-h-[180px]" placeholder={RAW_TEXT_PLACEHOLDER} />
-            <div className="flex items-center gap-2"><Button variant="outline" onClick={handleParseText} disabled={isParsing || !rawText.trim()} className="gap-1.5"><Sparkles className="h-4 w-4" />{isParsing ? TEXT.parsing : TEXT.parse}</Button></div>
-            {parsePreview ? (
-              <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{TEXT.parseResult}</p>
-                    <p className="text-sm text-muted-foreground">{`\u65e5\u671f ${parsePreview.date}\uff0c${TEXT.total} ${formatHours(parsePreview.totalMinutes)}`}</p>
-                  </div>
-                  <Button size="sm" onClick={applyParsePreview}>{TEXT.apply}</Button>
-                </div>
-                <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-2">
-                  <div>{`${TEXT.weight}\uff1a${parsePreview.weight ?? '--'}`}</div>
-                  <div>{`${TEXT.waist}\uff1a${parsePreview.waist ?? '--'}`}</div>
-                  <div>{`${TEXT.chest}\uff1a${parsePreview.chest ?? '--'}`}</div>
-                  <div>{`${TEXT.hips}\uff1a${parsePreview.hips ?? '--'}`}</div>
-                </div>
-                <div className="space-y-2">
-                  {parsePreview.activities.length > 0 ? parsePreview.activities.map((activity, index) => <div key={`${activity.startTime}-${activity.endTime}-${index}`} className="rounded border bg-background px-3 py-2 text-sm"><span className="font-medium">{activity.startTime} - {activity.endTime}</span><p className="mt-1 whitespace-pre-wrap text-muted-foreground">{activity.content}</p></div>) : <p className="text-sm text-muted-foreground">{TEXT.noActivities}</p>}
-                </div>
-                {parsePreview.warnings.length > 0 ? <div className="space-y-1 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{parsePreview.warnings.map((warning) => <p key={warning}>{warning}</p>)}</div> : null}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
+                ) : null}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     )
   }

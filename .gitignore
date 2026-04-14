@@ -7,3 +7,5 @@ image/
 dist-win/
 dist-linux/
 dist-mac/
+openspec/
+prisma/backups/

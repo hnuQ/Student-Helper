@@ -19,6 +19,10 @@ declare global {
     totalMinutes: number
     studyMinutes: number
     trainingPlan: string | null
+    breakfast: string | null
+    lunch: string | null
+    dinner: string | null
+    snacks: string | null
     rawText: string | null
     summary: string | null
     activities: DailyActivityInput[]
@@ -105,6 +109,10 @@ declare global {
         hips?: number | null
         studyMinutes?: number
         trainingPlan?: string | null
+        breakfast?: string | null
+        lunch?: string | null
+        dinner?: string | null
+        snacks?: string | null
         rawText?: string | null
         summary?: string | null
         activities: DailyActivityInput[]
