@@ -1,6 +1,6 @@
 {
   "name": "student-helper",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "description": "Student Helper desktop app",
   "author": "Jensenyjc <jensenyjc@example.com>",
   "main": "./out/main/index.js",

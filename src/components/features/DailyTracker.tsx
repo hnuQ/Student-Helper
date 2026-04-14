@@ -57,6 +57,11 @@ interface MealsDraft {
   snacks: string
 }
 
+interface FeedbackState {
+  type: 'success' | 'error'
+  message: string
+}
+
 const TEXT = {
   title: '\u65e5\u5e38',
   subtitle: '\u6309\u5929\u8bb0\u5f55\u5b66\u4e60\u3001\u8bad\u7ec3\u548c\u8eab\u4f53\u6570\u636e\uff0c\u652f\u6301\u5468\u89c6\u56fe\u6c47\u603b\u3002',
@@ -123,6 +128,8 @@ const TEXT = {
   saveSuccess: '\u4fdd\u5b58\u6210\u529f',
   refreshSuccess: '\u5df2\u5237\u65b0\u5f53\u524d\u65e5\u671f\u6570\u636e',
   saveFailed: '\u4fdd\u5b58\u5931\u8d25\uff1a',
+  refreshFailed: '\u5237\u65b0\u5931\u8d25\uff1a',
+  weekSummarySaved: '\u5468\u603b\u7ed3\u5df2\u4fdd\u5b58',
   deleteConfirmPrefix: '\u786e\u5b9a\u5220\u9664 ',
   deleteConfirmSuffix: ' \u7684\u65e5\u5e38\u8bb0\u5f55\u5417\uff1f'
 } as const
@@ -209,6 +216,7 @@ export default function DailyTracker(): JSX.Element {
   const [parsePreview, setParsePreview] = useState<DailyParseResult | null>(null)
   const [weekData, setWeekData] = useState<WeeklyDailyBundle | null>(null)
   const [weekSummary, setWeekSummary] = useState('')
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
   const [isLoadingDay, setIsLoadingDay] = useState(false)
@@ -254,6 +262,26 @@ export default function DailyTracker(): JSX.Element {
     if (selectedDate) void loadDay(selectedDate)
   }, [selectedDate])
 
+  useEffect(() => {
+    if (!feedback) return
+    const timer = window.setTimeout(() => setFeedback(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [feedback])
+
+  function syncEditorFromRecord(record: DailyRecordData | null): void {
+    setSelectedRecord(record)
+    setHealth(buildHealthDraft(record))
+    setMeals(buildMealsDraft(record))
+    setActivities(buildActivityDrafts(record))
+    setTrainingPlan(record?.trainingPlan || 'REST')
+    setSummary(record?.summary || '')
+    setRawText(record?.rawText || '')
+  }
+
+  function showFeedback(type: FeedbackState['type'], message: string): void {
+    setFeedback({ type, message })
+  }
+
   async function loadMonth(month: Date): Promise<void> {
     setMonthRecords(await window.api.daily.getMonth(formatDateKey(month)))
   }
@@ -262,13 +290,7 @@ export default function DailyTracker(): JSX.Element {
     setIsLoadingDay(true)
     try {
       const record = await window.api.daily.getByDate(date)
-      setSelectedRecord(record)
-      setHealth(buildHealthDraft(record))
-      setMeals(buildMealsDraft(record))
-      setActivities(buildActivityDrafts(record))
-      setTrainingPlan(record?.trainingPlan || 'REST')
-      setSummary(record?.summary || '')
-      setRawText(record?.rawText || '')
+      syncEditorFromRecord(record)
       setParsePreview(null)
     } finally {
       setIsLoadingDay(false)
@@ -356,9 +378,14 @@ export default function DailyTracker(): JSX.Element {
 
   async function handleRefreshDay(): Promise<void> {
     if (!selectedDate) return
-    setParsePreview(null)
-    await Promise.all([loadDay(selectedDate), loadWeek(selectedDate), loadMonth(currentMonth)])
-    alert(TEXT.refreshSuccess)
+    try {
+      setParsePreview(null)
+      await Promise.all([loadDay(selectedDate), loadWeek(selectedDate), loadMonth(currentMonth)])
+      showFeedback('success', TEXT.refreshSuccess)
+    } catch (error) {
+      console.error(error)
+      showFeedback('error', `${TEXT.refreshFailed}${(error as Error).message}`)
+    }
   }
 
   async function handleSave(): Promise<void> {
@@ -382,11 +409,11 @@ export default function DailyTracker(): JSX.Element {
         activities
       })
       setSelectedRecord(saved)
-      await Promise.all([loadMonth(currentMonth), loadDay(selectedDate), loadWeek(selectedDate)])
-      alert(TEXT.saveSuccess)
+      await Promise.all([loadMonth(currentMonth), loadWeek(selectedDate)])
+      showFeedback('success', TEXT.saveSuccess)
     } catch (error) {
       console.error(error)
-      alert(`${TEXT.saveFailed}${(error as Error).message}`)
+      showFeedback('error', `${TEXT.saveFailed}${(error as Error).message}`)
     } finally {
       setIsSaving(false)
     }
@@ -403,6 +430,7 @@ export default function DailyTracker(): JSX.Element {
   async function handleSaveWeekSummary(): Promise<void> {
     await window.api.daily.saveWeekSummary(weekBaseDate, weekSummary)
     await loadWeek(weekBaseDate)
+    showFeedback('success', TEXT.weekSummarySaved)
   }
 
   function renderCalendarOverview(): JSX.Element {
@@ -705,6 +733,20 @@ export default function DailyTracker(): JSX.Element {
             </TabsList>
           </Tabs>
         </div>
+
+        {feedback ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`rounded-lg border px-4 py-3 text-sm ${
+              feedback.type === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-destructive/30 bg-destructive/10 text-destructive'
+            }`}
+          >
+            {feedback.message}
+          </div>
+        ) : null}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="calendar" className="mt-0">

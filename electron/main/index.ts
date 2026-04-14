@@ -146,6 +146,7 @@ async function initializeDatabase(): Promise<string> {
   const dbPath = getDatabasePath()
 
   if (isDev) {
+    ensureDailyRecordColumns(dbPath)
     log.info('[Dev] Using local database at:', dbPath)
     return dbPath
   }
